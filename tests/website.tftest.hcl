@@ -29,3 +29,43 @@ run "create_bucket" {
     error_message = "Invalid eTag for error.html"
   }
 }
+
+run "website_is_running" {
+  command = plan
+
+  module {
+    source = "./tests/final"
+  }
+
+  variables {
+    endpoint = run.create_bucket.website_endpoint
+  }
+
+  assert {
+    condition     = data.http.index.status_code == 200
+    error_message = "Website responded with HTTP status ${data.http.index.status_code}"
+  }
+}
+
+# Mock tests
+# It mocks the resources without having to create them
+
+override_resource {
+  target = aws_instance.backend_api
+}
+
+override_resource {
+  target = aws_db_instance.backend_api
+}
+
+run "check_backend_api" {
+  assert {
+    condition     = aws_instance.backend_api.tags.Name == "backend"
+    error_message = "Invalid name tag"
+  }
+
+  assert {
+    condition     = aws_db_instance.backend_api.username == "foo"
+    error_message = "Invaid database username"
+  }
+}
